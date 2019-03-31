@@ -6,13 +6,9 @@ class Ball {
 
 class Cell {
     constructor(row, col) {
-        this.ball = null;
         this.row = row;
         this.col = col;
-    }
-
-    clone() {
-        return new Cell(this.row, this.col);
+        this.ball = null;
     }
 
     get hasBall() {
@@ -142,28 +138,37 @@ class LinesGame extends React.Component {
                 return;
             }
 
-            this.setState({
-                board: this.getUpdatedBoard(c => {
-                    if (c === this.state.cellWithSelectedBall) {
-                        // Removing the ball from the source cell.
-                        const newCell = c.clone();
-                        newCell.ball = null;
-                        return newCell;
-                    }
-
-                    if (c === cell) {
-                        // Adding the ball to the target cell.
-                        const newCell = c.clone();
-                        newCell.ball = this.state.cellWithSelectedBall.ball;
-                        return newCell;
-                    }
-
-                    return c;
-                }),
-
-                cellWithSelectedBall: null
-            })
+            this.setState({ cellWithSelectedBall: null });
+            this.animateBallPath(path);
         }
+    }
+
+    animateBallPath(path) {
+        this.moveBall(path[0].row, path[0].col, path[1].row, path[1].col);
+
+        if (path.length > 2) {
+            setTimeout(() => this.animateBallPath(path.slice(1)), 50);
+        }
+    }
+
+    moveBall(sourceRow, sourceCol, targetRow, targetCol) {
+        this.setState({
+            board: this.getUpdatedBoard(cell => {
+                if (cell.row === sourceRow && cell.col === sourceCol) {
+                    // Removing the ball from the source cell.
+                    return new Cell(cell.row, cell.col);
+                }
+
+                if (cell.row === targetRow && cell.col === targetCol) {
+                    // Adding the ball to the target cell.
+                    const newCell = new Cell(cell.row, cell.col);
+                    newCell.ball = this.state.board[sourceRow][sourceCol].ball;
+                    return newCell;
+                }
+
+                return cell;
+            })
+        });
     }
 
     getUpdatedBoard(cellTransformer) {
