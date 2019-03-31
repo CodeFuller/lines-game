@@ -11,40 +11,30 @@ class Cell {
         this.col = col;
     }
 
+    clone() {
+        return new Cell(this.row, this.col);
+    }
+
     get hasBall() {
         return this.ball !== null;
     }
 }
 
-class Board {
+class BoardHelper {
 
-    constructor(size, colorsNumber) {
-        this.size = size;
-        this.cells = this.cellsIndexes().map(i => this.cellsIndexes().map(j => new Cell(i, j)));
-        this.colorsNumber = colorsNumber;
-    }
-
-    cellsIndexes() {
-        return Array.from({length: this.size}, (v, k) => k);
-    }
-
-    get rows() {
-        return this.cells;
-    }
-
-    findPath(srcCell, dstCell) {
+    static findPath(board, srcCell, dstCell) {
         const srcItem = {
             cell: srcCell,
             path: [ srcCell ],
         };
-        return this.traverseToCell(dstCell, [ srcItem ], new Set([srcCell]));
+        return BoardHelper.traverseToCell(board, dstCell, [ srcItem ], new Set([srcCell]));
     }
 
-    traverseToCell(dstCell, traversalQueue, visitedCells) {
+    static traverseToCell(board, dstCell, traversalQueue, visitedCells) {
         while (traversalQueue.length > 0) {
             const currItem = traversalQueue.shift();
 
-            for (let neighborCell of this.getPossibleMoves(currItem.cell)) {
+            for (let neighborCell of BoardHelper.getPossibleMoves(board, currItem.cell)) {
                 if (visitedCells.has(neighborCell)) {
                     continue;
                 }
@@ -69,17 +59,15 @@ class Board {
         return null;
     }
 
-    getPossibleMoves(cell) {
-        const cellIndexIsValid = ind => ind >= 0 && ind < this.size;
-
+    static getPossibleMoves(board, cell) {
         return [
             { row: cell.row - 1, col: cell.col },
             { row: cell.row, col: cell.col + 1 },
             { row: cell.row + 1, col: cell.col },
             { row: cell.row, col: cell.col - 1 },
         ]
-        .filter(c => cellIndexIsValid(c.row) && cellIndexIsValid(c.col))
-        .map(c => this.cells[c.row][c.col])
+        .filter(c => c.row >= 0 && c.row < board.length && c.col >= 0 && c.col < board[c.row].length)
+        .map(c => board[c.row][c.col])
         .filter(cell => !cell.hasBall);
     }
 }
@@ -90,15 +78,14 @@ class LinesGame extends React.Component {
         super(props);
 
         this.state = {
+            board: this.cellsIndexes().map(i => this.cellsIndexes().map(j => new Cell(i, j))),
             cellWithSelectedBall: null,
         };
 
-        this.board = new Board(props.size, props.colorsNumber);
-
-        for (let row of this.board.rows) {
+        for (let row of this.state.board) {
             for (let cell of row) {
                 if (Math.random() > 0.5) {
-                    const color = Math.floor(Math.random() * this.board.colorsNumber);
+                    const color = Math.floor(Math.random() * this.props.colorsNumber);
                     cell.ball = new Ball(color);
                 }
             }
@@ -106,8 +93,8 @@ class LinesGame extends React.Component {
     }
 
     render() {
-        const tableRows = Array(this.board.rows.length);
-        for (let [i, row] of this.board.rows.entries()) {
+        const tableRows = Array(this.state.board.length);
+        for (let [i, row] of this.state.board.entries()) {
             const tableRow = Array(row.length);
             for (let [j, cell] of row.entries()) {
                 const ballElement = cell.hasBall ? <span className={`lines-ball lines-ball-color-${cell.ball.color}`}></span> : null;
@@ -125,6 +112,10 @@ class LinesGame extends React.Component {
                 </tbody>
             </table>
         );
+    }
+
+    cellsIndexes() {
+        return Array.from({length: this.props.size}, (v, k) => k);
     }
 
     handleCellClick(cell) {
@@ -146,16 +137,37 @@ class LinesGame extends React.Component {
 
         // A ball was previously selected and empty cell is now clicked.
         if (this.state.cellWithSelectedBall !== null) {
-            const path = this.board.findPath(this.state.cellWithSelectedBall, cell);
+            const path = BoardHelper.findPath(this.state.board, this.state.cellWithSelectedBall, cell);
             if (path == null) {
                 return;
             }
 
-            cell.ball = this.state.cellWithSelectedBall.ball;
-            this.state.cellWithSelectedBall.ball = null;
-            this.state.cellWithSelectedBall = null;
-            this.setState(this.state);
+            this.setState({
+                board: this.getUpdatedBoard(c => {
+                    if (c === this.state.cellWithSelectedBall) {
+                        // Removing the ball from the source cell.
+                        const newCell = c.clone();
+                        newCell.ball = null;
+                        return newCell;
+                    }
+
+                    if (c === cell) {
+                        // Adding the ball to the target cell.
+                        const newCell = c.clone();
+                        newCell.ball = this.state.cellWithSelectedBall.ball;
+                        return newCell;
+                    }
+
+                    return c;
+                }),
+
+                cellWithSelectedBall: null
+            })
         }
+    }
+
+    getUpdatedBoard(cellTransformer) {
+        return this.state.board.map(row => row.map(cell => cellTransformer(cell)));
     }
 }
 
