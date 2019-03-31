@@ -5,6 +5,10 @@
     text-align: center;
 }
 
+.lines-selected-cell {
+    background-color: #999;
+}
+
 .lines-ball {
     height: 35px;
     width: 35px;

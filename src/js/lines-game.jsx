@@ -36,11 +36,15 @@ class LinesGame extends React.Component {
     constructor(props) {
         super(props);
 
+        this.state = {
+            cellWithSelectedBall: null,
+        };
+
         this.board = new Board(props.size, props.colorsNumber);
 
         for (let row of this.board.rows) {
             for (let cell of row) {
-                if (Math.random() > 0.5) {
+                if (Math.random() > 0.7) {
                     const color = Math.floor(Math.random() * this.board.colorsNumber);
                     cell.ball = new Ball(color);
                 }
@@ -49,12 +53,13 @@ class LinesGame extends React.Component {
     }
 
     render() {
-
         const tableRows = Array(this.board.rows.length);
         for (let [i, row] of this.board.rows.entries()) {
             const tableRow = Array(row.length);
             for (let [j, cell] of row.entries()) {
-                const tableCell = <td key={`cell${i}${j}`} className="lines-cell">{cell.hasBall && <span className={`lines-ball lines-ball-color-${cell.ball.color}`}></span>}</td>;
+                const ballElement = cell.hasBall ? <span className={`lines-ball lines-ball-color-${cell.ball.color}`}></span> : null;
+                const tableCell = <td key={`cell${i}${j}`} className={`lines-cell${cell === this.state.cellWithSelectedBall ? " lines-selected-cell" : ""}`}
+                                        onClick={event => this.handleCellClick(cell)}>{ballElement}</td>;
                 tableRow.push(tableCell);
             }
             tableRows.push(<tr key={`row${i}`}>{tableRow}</tr>);
@@ -69,8 +74,12 @@ class LinesGame extends React.Component {
         );
     }
 
-    cellsNumbers() {
-        return Array.from({length: this.boardSize}, (v, k) => k + 1);
+    handleCellClick(cell) {
+        this.setState({ cellWithSelectedBall: cell.hasBall ? cell : null });
+    }
+
+    getBoardCell(tableCell) {
+
     }
 }
 
