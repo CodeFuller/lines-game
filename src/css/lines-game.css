@@ -1,0 +1,41 @@
+.lines-cell {
+    width: 50px;
+    height: 50px;
+    background-color: lightgray;
+    text-align: center;
+}
+
+.lines-ball {
+    height: 35px;
+    width: 35px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.lines-ball-color-0 {
+    background-color: red;
+}
+
+.lines-ball-color-1 {
+    background-color: orange;
+}
+
+.lines-ball-color-2 {
+    background-color: yellow;
+}
+
+.lines-ball-color-3 {
+    background-color: green;
+}
+
+.lines-ball-color-4 {
+    background-color: blue;
+}
+
+.lines-ball-color-5 {
+    background-color: purple;
+}
+
+.lines-ball-color-6 {
+    background-color: black;
+}
