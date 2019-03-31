@@ -111,7 +111,7 @@ class LinesGame extends React.Component {
     }
 
     cellsIndexes() {
-        return Array.from({length: this.props.size}, (v, k) => k);
+        return Array.from({length: this.props.boardSize}, (v, k) => k);
     }
 
     handleCellClick(cell) {
@@ -176,4 +176,9 @@ class LinesGame extends React.Component {
     }
 }
 
-ReactDOM.render(<LinesGame size="9" colorsNumber="7"></LinesGame>, document.getElementById("play-area"));
+LinesGame.defaultProps = {
+    boardSize: 9,
+    colorsNumber: 7,
+};
+
+ReactDOM.render(<LinesGame></LinesGame>, document.getElementById("play-area"));
