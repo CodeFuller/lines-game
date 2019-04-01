@@ -181,4 +181,9 @@ LinesGame.defaultProps = {
     colorsNumber: 7,
 };
 
+LinesGame.propTypes = {
+    boardSize: PropTypes.number,
+    colorsNumber: PropTypes.number,
+};
+
 ReactDOM.render(<LinesGame></LinesGame>, document.getElementById("play-area"));
