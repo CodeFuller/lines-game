@@ -18,6 +18,39 @@ class Cell {
 
 class BoardHelper {
 
+    static setInitalBalls(board, startingBallsNumber, colorsNumber) {
+        this.dropNewBalls(board, startingBallsNumber, colorsNumber);
+    }
+
+    static dropNewBalls(board, newBallsNumber, colorsNumber) {
+        for (let i = 0; i < newBallsNumber; ++i) {
+            const cell = BoardHelper.getRandomFreeCell(board);
+            cell.ball = BoardHelper.getRandomBall(colorsNumber);
+        }
+    }
+    
+    static getRandomFreeCell(board) {
+        const freeCells = Array.from(BoardHelper.getBoardCells(board)).filter(c => !c.hasBall);
+        if (freeCells.length == 0) {
+            throw "The board is full";
+        }
+
+        return freeCells[Math.floor(freeCells.length * Math.random())];
+    }
+
+    static getRandomBall(colorsNumber) {
+        const color = Math.floor(Math.random() * colorsNumber);
+        return new Ball(color);
+    }
+
+    static *getBoardCells(board) {
+        for (let row of board) {
+            for (let cell of row) {
+                yield cell;
+            }
+        }
+    }
+
     static findPath(board, srcCell, dstCell) {
         const srcItem = {
             cell: srcCell,
@@ -78,14 +111,7 @@ class LinesGame extends React.Component {
             cellWithSelectedBall: null,
         };
 
-        for (let row of this.state.board) {
-            for (let cell of row) {
-                if (Math.random() > 0.5) {
-                    const color = Math.floor(Math.random() * this.props.colorsNumber);
-                    cell.ball = new Ball(color);
-                }
-            }
-        }
+        BoardHelper.setInitalBalls(this.state.board, this.props.startingBallsNumber, this.props.colorsNumber);
     }
 
     render() {
@@ -144,41 +170,46 @@ class LinesGame extends React.Component {
     }
 
     animateBallPath(path) {
-        this.moveBall(path[0].row, path[0].col, path[1].row, path[1].col);
+        if (path.length < 2) {
+            if (!this.collapseLines()) {
+                const newBoard = this.duplicateBoard();
+                BoardHelper.dropNewBalls(newBoard, this.props.newDropBallsNumber, this.props.colorsNumber);
+                this.replaceBoard(newBoard);
+            }
 
-        if (path.length > 2) {
-            setTimeout(() => this.animateBallPath(path.slice(1)), 50);
+            return;
         }
+
+        this.moveBall(path[0], path[1]);
+        setTimeout(() => this.animateBallPath(path.slice(1)), 50);
+    }
+    
+    moveBall(sourceCell, targetCell) {
+        const newBoard = this.duplicateBoard();
+        targetCell.ball = sourceCell.ball;
+        sourceCell.ball = null;
+        this.replaceBoard(newBoard);
     }
 
-    moveBall(sourceRow, sourceCol, targetRow, targetCol) {
-        this.setState({
-            board: this.getUpdatedBoard(cell => {
-                if (cell.row === sourceRow && cell.col === sourceCol) {
-                    // Removing the ball from the source cell.
-                    return new Cell(cell.row, cell.col);
-                }
-
-                if (cell.row === targetRow && cell.col === targetCol) {
-                    // Adding the ball to the target cell.
-                    const newCell = new Cell(cell.row, cell.col);
-                    newCell.ball = this.state.board[sourceRow][sourceCol].ball;
-                    return newCell;
-                }
-
-                return cell;
-            })
-        });
+    collapseLines() {
+        return false;
     }
 
-    getUpdatedBoard(cellTransformer) {
-        return this.state.board.map(row => row.map(cell => cellTransformer(cell)));
+    duplicateBoard() {
+        return this.state.board.slice();
+    }
+
+    replaceBoard(newBoard) {
+        this.setState({ board: newBoard });
     }
 }
 
 LinesGame.defaultProps = {
     boardSize: 9,
     colorsNumber: 7,
+    startingBallsNumber: 5,
+    newDropBallsNumber: 3,
+    minCollapsingLine: 5
 };
 
 LinesGame.propTypes = {
