@@ -99,6 +99,82 @@ class BoardHelper {
         .map(c => board[c.row][c.col])
         .filter(cell => !cell.hasBall);
     }
+
+    static *getCollapsingLines(board, minCollapsingLine) {
+        for (let fullLine of BoardHelper.getFullLines(board, minCollapsingLine)) {
+            for (let collapseStart = 0; collapseStart + minCollapsingLine <= fullLine.length; ) {
+                const startCell = fullLine[collapseStart];
+                if (!startCell.hasBall) {
+                    ++collapseStart;
+                    continue;
+                }
+
+                let collapseEnd;
+                for (collapseEnd = collapseStart + 1; collapseEnd < fullLine.length; ++collapseEnd) {
+                    if (!fullLine[collapseEnd].hasBall || fullLine[collapseEnd].ball.color !== startCell.ball.color) {
+                        break;
+                    }
+                }
+
+                // Now collapseEnd points to the next cell after lines with same colors.
+
+                if (collapseEnd - collapseStart >= minCollapsingLine) {
+                    yield fullLine.slice(collapseStart, collapseEnd);
+                }
+
+                collapseStart = collapseEnd;
+            }
+        }
+    }
+
+    static *getFullLines(board, minCollapsingLine) {
+
+        // Rows
+        for (let row of board) {
+            yield row;
+        }
+
+        // Columns
+        for (let col = 0; col < board[0].length; ++col) {
+            yield board.map(row => row[col]);
+        }
+
+        // Diagonal, above \
+        for (let startingCol = 0; startingCol <= board[0].length - minCollapsingLine; ++startingCol) {
+            const currLine = [];
+            for (let i = 0; startingCol + i < board[0].length; ++i) {
+                currLine.push(board[i][startingCol + i]);
+            }
+            yield currLine;
+        }
+
+        // Diagonal, below \
+        for (let startingRow = 1; startingRow <= board.length - minCollapsingLine; ++startingRow) {
+            const currLine = [];
+            for (let i = 0; startingRow + i < board.length; ++i) {
+                currLine.push(board[startingRow + i][i]);
+            }
+            yield currLine;
+        }
+
+        // Diagonal, above /
+        for (let startingRow = board.length - 1; startingRow + 1 >= minCollapsingLine; --startingRow) {
+            const currLine = [];
+            for (let i = 0; i <= startingRow; ++i) {
+                currLine.push(board[startingRow - i][i]);
+            }
+            yield currLine;
+        }
+
+        // Diagonal, below /
+        for (let startingCol = 1; startingCol <= board[0].length - minCollapsingLine; ++startingCol) {
+            const currLine = [];
+            for (let i = 0; startingCol + i < board[0].length; ++i) {
+                currLine.push(board[board.length - 1 - i][startingCol + i]);
+            }
+            yield currLine;
+        }
+    }
 }
 
 class LinesGame extends React.Component {
@@ -175,6 +251,9 @@ class LinesGame extends React.Component {
                 const newBoard = this.duplicateBoard();
                 BoardHelper.dropNewBalls(newBoard, this.props.newDropBallsNumber, this.props.colorsNumber);
                 this.replaceBoard(newBoard);
+
+                // After drop of new balls, we should collapse lines again, because new balls could complete some lines.
+                this.collapseLines();
             }
 
             return;
@@ -192,6 +271,19 @@ class LinesGame extends React.Component {
     }
 
     collapseLines() {
+        const collapsingLines = BoardHelper.getCollapsingLines(this.state.board, this.props.minCollapsingLine);
+        if (collapsingLines.length == 0) {
+            return false;
+        }
+
+        const newBoard = this.duplicateBoard(this.state.board);
+        for (let line of collapsingLines) {
+            for (let cell of line) {
+                cell.ball = null;
+            }
+        }
+
+        this.setState({ board: newBoard });
         return false;
     }
 
