@@ -185,6 +185,7 @@ class LinesGame extends React.Component {
         this.state = {
             board: this.cellsIndexes().map(i => this.cellsIndexes().map(j => new Cell(i, j))),
             cellWithSelectedBall: null,
+            score: 0
         };
 
         BoardHelper.setInitalBalls(this.state.board, this.props.startingBallsNumber, this.props.colorsNumber);
@@ -204,11 +205,16 @@ class LinesGame extends React.Component {
         }
 
         return (
-            <table>
-                <tbody>
-                    {tableRows}
-                </tbody>
-            </table>
+            <div>
+                <table>
+                    <tbody>
+                        {tableRows}
+                    </tbody>
+                </table>
+                <div className="lines-score">
+                    Score: <span className="lines-score-value">{this.state.score}</span>
+                </div>
+            </div>
         );
     }
 
@@ -271,20 +277,27 @@ class LinesGame extends React.Component {
     }
 
     collapseLines() {
-        const collapsingLines = BoardHelper.getCollapsingLines(this.state.board, this.props.minCollapsingLine);
+        const collapsingLines = Array.from(BoardHelper.getCollapsingLines(this.state.board, this.props.minCollapsingLine));
         if (collapsingLines.length == 0) {
             return false;
         }
 
+        let newScore = this.state.score;
         const newBoard = this.duplicateBoard(this.state.board);
         for (let line of collapsingLines) {
             for (let cell of line) {
                 cell.ball = null;
             }
+
+            newScore += this.props.calcScoreForCollapsingLine(line);
         }
 
-        this.setState({ board: newBoard });
-        return false;
+        this.setState({
+            board: newBoard,
+            score: newScore
+        });
+
+        return true;
     }
 
     duplicateBoard() {
@@ -301,7 +314,10 @@ LinesGame.defaultProps = {
     colorsNumber: 7,
     startingBallsNumber: 5,
     newDropBallsNumber: 3,
-    minCollapsingLine: 5
+    minCollapsingLine: 5,
+    calcScoreForCollapsingLine: function(line) {
+        return line.length * (line.length - (this.minCollapsingLine - 1));
+    },
 };
 
 LinesGame.propTypes = {
