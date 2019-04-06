@@ -16,21 +16,79 @@ class Cell {
     }
 }
 
+class NextBalls {
+    constructor() {
+        this.balls = [];
+    }
+
+    add(cell, ball) {
+        this.balls.push({ cell, ball });
+    }
+
+    contains(cell) {
+        return this.getNextBall(cell) !== undefined;
+    }
+
+    getNextBall(cell) {
+        const cb = this.balls.find(cb => cb.cell === cell);
+        return cb === undefined ? undefined : cb.ball;
+    }
+}
+
 class BoardHelper {
 
     static setInitalBalls(board, startingBallsNumber, colorsNumber) {
-        this.dropNewBalls(board, startingBallsNumber, colorsNumber);
+        this.dropNewBalls(board, new NextBalls(), startingBallsNumber, colorsNumber);
     }
 
-    static dropNewBalls(board, newBallsNumber, colorsNumber) {
-        for (let i = 0; i < newBallsNumber; ++i) {
+    static getNextBalls(board, nextBallsNumber, colorsNumber) {
+        const nextBalls = new NextBalls();
+        for (let i = 0; i < nextBallsNumber; ++i) {
+            const cell = BoardHelper.getRandomFreeCell(board, nextBalls);
+            if (cell === null) {
+                break;
+            }
+
+            nextBalls.add(cell, BoardHelper.getRandomBall(colorsNumber));
+        }
+
+        return nextBalls;
+    }
+
+    static dropNewBalls(board, nextBalls, newBallsNumber, colorsNumber) {
+
+        // At first we're dropping next balls on cells that are still free.
+        const restBalls = [];
+        for (let nextBall of nextBalls.balls) {
+            const cell = nextBall.cell;
+            if (cell.hasBall) {
+                restBalls.push(nextBall.ball);
+            } else {
+                cell.ball = nextBall.ball;
+                if (newBallsNumber-- <= 0) {
+                    return;
+                }
+            }
+        }
+
+        if (restBalls.length < newBallsNumber) {
+            restBalls.push(...Array.from({ length: newBallsNumber - restBalls.length }, () => BoardHelper.getRandomBall(colorsNumber)));
+        } else if (restBalls.length > newBallsNumber) {
+            restBalls = restBalls.slice(0, newBallsNumber);
+        }
+
+        for (let restBall of restBalls) {
             const cell = BoardHelper.getRandomFreeCell(board);
-            cell.ball = BoardHelper.getRandomBall(colorsNumber);
+            if (cell === null) {
+                return;
+            }
+            cell.ball = restBall;
         }
     }
     
-    static getRandomFreeCell(board) {
-        const freeCells = Array.from(BoardHelper.getBoardCells(board)).filter(c => !c.hasBall);
+    static getRandomFreeCell(board, nextBalls = null) {
+        const freeCells = Array.from(BoardHelper.getBoardCells(board)).filter(c => !c.hasBall)
+            .filter(c => !(nextBalls && nextBalls.contains(c)));
         if (freeCells.length == 0) {
             throw "The board is full";
         }
@@ -189,6 +247,8 @@ class LinesGame extends React.Component {
         };
 
         BoardHelper.setInitalBalls(this.state.board, this.props.startingBallsNumber, this.props.colorsNumber);
+
+        this.state.nextBalls = BoardHelper.getNextBalls(this.state.board, this.props.newDropBallsNumber, this.props.colorsNumber);
     }
 
     render() {
@@ -196,7 +256,16 @@ class LinesGame extends React.Component {
         for (let [i, row] of this.state.board.entries()) {
             const tableRow = Array(row.length);
             for (let [j, cell] of row.entries()) {
-                const ballElement = cell.hasBall ? <span className={`lines-ball lines-ball-color-${cell.ball.color}`}></span> : null;
+                let ballElement = null;
+                if (cell.hasBall) {
+                    ballElement = <span className={`lines-ball lines-ball-color-${cell.ball.color}`}></span>;
+                } else {
+                    var nextBall = this.state.nextBalls.getNextBall(cell);
+                    if (nextBall !== undefined) {
+                        ballElement = <span className={`lines-next-ball lines-ball-color-${nextBall.color}`}></span>;
+                    }
+                }
+
                 const tableCell = <td key={`cell${i}${j}`} className={`lines-cell${cell === this.state.cellWithSelectedBall ? " lines-selected-cell" : ""}`}
                                         onClick={event => this.handleCellClick(cell)}>{ballElement}</td>;
                 tableRow.push(tableCell);
@@ -255,8 +324,8 @@ class LinesGame extends React.Component {
         if (path.length < 2) {
             if (!this.collapseLines()) {
                 const newBoard = this.duplicateBoard();
-                BoardHelper.dropNewBalls(newBoard, this.props.newDropBallsNumber, this.props.colorsNumber);
-                this.replaceBoard(newBoard);
+                BoardHelper.dropNewBalls(newBoard, this.state.nextBalls, this.props.newDropBallsNumber, this.props.colorsNumber);
+                this.replaceBoard(newBoard, BoardHelper.getNextBalls(newBoard, this.props.newDropBallsNumber, this.props.colorsNumber));
 
                 // After drop of new balls, we should collapse lines again, because new balls could complete some lines.
                 this.collapseLines();
@@ -304,8 +373,11 @@ class LinesGame extends React.Component {
         return this.state.board.slice();
     }
 
-    replaceBoard(newBoard) {
-        this.setState({ board: newBoard });
+    replaceBoard(newBoard, newNextBalls) {
+        this.setState({
+            board: newBoard,
+            nextBalls: newNextBalls !== undefined ? newNextBalls : this.state.nextBalls,
+         });
     }
 }
 

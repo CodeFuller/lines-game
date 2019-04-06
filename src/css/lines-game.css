@@ -9,11 +9,19 @@
     background-color: #999;
 }
 
-.lines-ball {
-    height: 35px;
-    width: 35px;
+.lines-ball, .lines-next-ball {
     border-radius: 50%;
     display: inline-block;
+}
+
+.lines-ball {
+    width: 35px;
+    height: 35px;
+}
+
+.lines-next-ball {
+    width: 17px;
+    height: 17px;
 }
 
 .lines-ball-color-0 {
