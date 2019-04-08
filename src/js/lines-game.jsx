@@ -86,11 +86,21 @@ class BoardHelper {
         }
     }
     
+    static playerHasPossibleMove(board) {
+        for (let cell of BoardHelper.getBoardCells(board)) {
+            if (!cell.hasBall) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     static getRandomFreeCell(board, nextBalls = null) {
         const freeCells = Array.from(BoardHelper.getBoardCells(board)).filter(c => !c.hasBall)
             .filter(c => !(nextBalls && nextBalls.contains(c)));
         if (freeCells.length == 0) {
-            throw "The board is full";
+            return null;
         }
 
         return freeCells[Math.floor(freeCells.length * Math.random())];
@@ -329,6 +339,11 @@ class LinesGame extends React.Component {
 
                 // After drop of new balls, we should collapse lines again, because new balls could complete some lines.
                 this.collapseLines();
+
+                // Does the player have a valid move?
+                if (!BoardHelper.playerHasPossibleMove(newBoard)) {
+                    alert(`Game Over. Your score is ${this.state.score}`);
+                }
             }
 
             return;
